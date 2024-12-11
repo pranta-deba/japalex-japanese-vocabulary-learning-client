@@ -12,7 +12,14 @@ const registerUser = async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = { name, email, password: hashedPassword, photo };
+    const newUser = {
+      name,
+      email,
+      password: hashedPassword,
+      photo,
+      role: "user",
+      createAt: new Date(),
+    };
     const result = await db.collection("users").insertOne(newUser);
 
     res.status(201).json({ message: "User registered successfully", result });
@@ -44,4 +51,30 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser };
+const roleUpdate = async (req, res) => {
+  const { email: adminEmail } = req.query;
+  const { email, role } = req.body;
+  const db = await connectDB();
+
+  try {
+    const admin = await db.collection("users").findOne({ email: adminEmail });
+    const user = await db.collection("users").findOne({ email });
+    if (!user && !admin) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    if (admin.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    const updatedUser = await db
+      .collection("users")
+      .updateOne({ email }, { $set: { role } });
+    res.status(200).json({
+      message: "Updated successful",
+      updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+module.exports = { registerUser, loginUser,roleUpdate };
