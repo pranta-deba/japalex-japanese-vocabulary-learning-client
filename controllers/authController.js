@@ -15,9 +15,7 @@ const registerUser = async (req, res) => {
     const newUser = { name, email, password: hashedPassword, photo };
     const result = await db.collection("users").insertOne(newUser);
 
-    res
-      .status(201)
-      .json({ message: "User registered successfully", user: result.ops[0] });
+    res.status(201).json({ message: "User registered successfully", user: result.ops[0] });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
