@@ -1,11 +1,12 @@
+const { ObjectId } = require("mongodb");
 const connectDB = require("../config/db");
 const bcrypt = require("bcryptjs");
 
 const registerUser = async (req, res) => {
   const { name, email, password, photo } = req.body;
-  const db = await connectDB();
 
   try {
+    const db = await connectDB();
     const existingUser = await db.collection("users").findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
@@ -30,9 +31,9 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  const db = await connectDB();
 
   try {
+    const db = await connectDB();
     const user = await db.collection("users").findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -53,12 +54,14 @@ const loginUser = async (req, res) => {
 
 const roleUpdateByAdmin = async (req, res) => {
   const { email: adminEmail } = req.query;
-  const { email, role } = req.body;
-  const db = await connectDB();
+  const { id, role } = req.body;
 
   try {
+    const db = await connectDB();
     const admin = await db.collection("users").findOne({ email: adminEmail });
-    const user = await db.collection("users").findOne({ email });
+    const user = await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(id) });
     if (!user && !admin) {
       return res.status(403).json({ message: "Unauthorized" });
     }
@@ -67,7 +70,7 @@ const roleUpdateByAdmin = async (req, res) => {
     }
     const updatedUser = await db
       .collection("users")
-      .updateOne({ email }, { $set: { role } });
+      .updateOne({ _id: new ObjectId(id) }, { $set: { role } });
     res.status(200).json({
       message: "Role updated successful",
       updatedUser,
@@ -78,9 +81,9 @@ const roleUpdateByAdmin = async (req, res) => {
 };
 
 const updateSingleUser = async (req, res) => {
-  const db = await connectDB();
+  const { email, password, photo, name } = req.body;
   try {
-    const { email, password, photo, name } = req.body;
+    const db = await connectDB();
     const user = await db.collection("users").findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -103,13 +106,28 @@ const updateSingleUser = async (req, res) => {
 };
 
 const allUsers = async (req, res) => {
-  const db = await connectDB();
+  const { email: adminEmail } = req.query;
+  
   try {
-    const users = await db.collection("users").find().toArray();
+    const db = await connectDB();
+    const admin = await db.collection("users").findOne({ email: adminEmail });
+    if (!adminEmail || !admin || admin.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    const users = await db
+      .collection("users")
+      .find({}, { projection: { password: 0 } })
+      .toArray();
     res.status(200).json({ message: "Users fetched successfully", users });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 };
 
-module.exports = { registerUser, loginUser, roleUpdateByAdmin, allUsers,updateSingleUser };
+module.exports = {
+  registerUser,
+  loginUser,
+  roleUpdateByAdmin,
+  allUsers,
+  updateSingleUser,
+};
