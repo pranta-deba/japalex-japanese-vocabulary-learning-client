@@ -11,7 +11,7 @@ const connectDB = async () => {
     });
     await client.connect();
     console.log("MongoDB Connected...");
-    return client.db();
+    return client.db("japalex");
   } catch (err) {
     console.error("MongoDB Connection Error: ", err.message);
     process.exit(1);

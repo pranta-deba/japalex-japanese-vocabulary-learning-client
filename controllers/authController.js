@@ -1,9 +1,9 @@
-const { connectDB } = require("../config/db");
+const connectDB = require("../config/db");
 const bcrypt = require("bcryptjs");
 
 const registerUser = async (req, res) => {
   const { name, email, password, photo } = req.body;
-  const db = connectDB();
+  const db = await connectDB();
 
   try {
     const existingUser = await db.collection("users").findOne({ email });
@@ -15,7 +15,7 @@ const registerUser = async (req, res) => {
     const newUser = { name, email, password: hashedPassword, photo };
     const result = await db.collection("users").insertOne(newUser);
 
-    res.status(201).json({ message: "User registered successfully", user: result.ops[0] });
+    res.status(201).json({ message: "User registered successfully", result });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -23,7 +23,7 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  const db = connectDB();
+  const db = await connectDB();
 
   try {
     const user = await db.collection("users").findOne({ email });
@@ -36,7 +36,9 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    res.status(200).json({ message: "Login successful", user });
+    res
+      .status(200)
+      .json({ message: "Login successful", user: { ...user, password: null } });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
