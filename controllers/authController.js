@@ -51,7 +51,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-const roleUpdate = async (req, res) => {
+const roleUpdateByAdmin = async (req, res) => {
   const { email: adminEmail } = req.query;
   const { email, role } = req.body;
   const db = await connectDB();
@@ -69,7 +69,7 @@ const roleUpdate = async (req, res) => {
       .collection("users")
       .updateOne({ email }, { $set: { role } });
     res.status(200).json({
-      message: "Updated successful",
+      message: "Role updated successful",
       updatedUser,
     });
   } catch (error) {
@@ -77,4 +77,39 @@ const roleUpdate = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser,roleUpdate };
+const updateSingleUser = async (req, res) => {
+  const db = await connectDB();
+  try {
+    const { email, password, photo, name } = req.body;
+    const user = await db.collection("users").findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const updatedUser = await db.collection("users").updateOne(
+      { email },
+      {
+        $set: {
+          name,
+          password: hashedPassword,
+          photo,
+        },
+      }
+    );
+    res.status(200).json({ message: "User updated successfully", updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+const allUsers = async (req, res) => {
+  const db = await connectDB();
+  try {
+    const users = await db.collection("users").find().toArray();
+    res.status(200).json({ message: "Users fetched successfully", users });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+module.exports = { registerUser, loginUser, roleUpdateByAdmin, allUsers,updateSingleUser };
